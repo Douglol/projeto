@@ -54,11 +54,6 @@ def choice(escolha):
         cursor.execute(f"UPDATE livros SET copias = {valor} WHERE id_livro = {escolha}")
         # Inserir dados na tabela de emprestimos
         cursor.execute("INSERT INTO livros_empr (id_livro, titulo, autor, data_publi, id_usuario) VALUES (?, ?, ?, ?, ?)", (escolha, linha[1], linha[2], linha[3], login_id))
-
-        # Mostrar emprestimos
-        cursor.execute("SELECT * FROM livros_empr WHERE id_usuario=?", (login_id))
-        for linha in cursor.fetchall():
-            print(linha)
         
         cursor.execute("DELETE FROM livros WHERE copias = 0")
 
@@ -174,6 +169,12 @@ def book_search(busca):
 
 # ----------------------------------------------------------------------------------
 
+# Pegar informações do livro para devolução
+aux1 = None
+aux2 = None
+aux3 = None
+aux4 = None
+
 # Exibir livro
 def show():
     # Conectar ao banco de dados
@@ -182,10 +183,53 @@ def show():
     # Criar um cursor para executar comandos SQL
     cursor = conn.cursor()
 
+    global aux1
+    global aux2
+    global aux3
+    global aux4
+
     # Mostrar emprestimos
     cursor.execute("SELECT * FROM livros_empr WHERE id_usuario=?", (login_id))
     for linha in cursor.fetchall():
-        print(f"ID: {linha[0]}, Titulo: {linha[2]}, Autor: {linha[3]}, Data de publicação: {linha[4]}")
+
+        # Pegar informações do livro para devolução
+        aux1 = str(linha[1])
+        aux2 = str(linha[2])
+        aux3 = str(linha[3])
+        aux4 = str(linha[4])
+
+        print(f"\033[93mID: \033[94m{linha[0]} \033[93mTitulo: \033[94m{linha[2]} \033[93mAutor: \033[94m{linha[3]} \033[93mData de publicação: \033[94m{linha[4]}\x1b[0m")
+
+# ----------------------------------------------------------------------------------
+
+# Acrescentar livro na devolução
+def quant():
+    # Conectar ao banco de dados
+    conn = sqlite3.connect('projeto.db')
+
+    # Criar um cursor para executar comandos SQL
+    cursor = conn.cursor()
+
+    # Verifica se o item já existe no banco de dados
+    cursor.execute("SELECT copias FROM livros WHERE id_livro=?", (aux1))
+    row = cursor.fetchone()
+
+    if row is None:
+        # Se o item não existe, adiciona-o ao banco de dados
+        cursor.execute("INSERT INTO livros (titulo, autor, data_publi, copias) VALUES (?, ?, ?, ?)", (aux2, aux3, aux4, "1"))
+    else:
+        # Se o item existe, aumenta a quantidade
+        row = list(row)
+        print(type(row))
+        nova_quant = row[0] + 1
+        nova_quant = str(nova_quant)
+        cursor.execute("UPDATE livros SET copias=? WHERE id_livro=?", (nova_quant, aux1))
+
+    # Commit para salvar as alterações
+    conn.commit()
+
+    # Fechar a conexão com o banco de dados
+    conn.close()
 
 # ----------------------------------------------------------------------------------
 
@@ -259,11 +303,13 @@ while pt != "5":
                 if menu_user == "2":
                     print("==============================")
                     print("EMPRÉSTIMOS FEITOS")
+                    print("==============================")
                     show()
 
                     # Selecionar qual livro devolver
                     devolver = input("Digite o ID do livro para devolver: ")
                     give_back(devolver)
+                    quant()
         else:
             print("\033[91mID invalido\x1b[0m")
 
