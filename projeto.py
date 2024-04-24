@@ -79,11 +79,12 @@ def new_user():
     cursor.execute('''CREATE TABLE IF NOT EXISTS usuarios (
                         id INTEGER PRIMARY KEY,
                         nome TEXT NOT NULL,
-                        senha TEXT NOT NULL
+                        senha TEXT NOT NULL,
+                        contato TEXT NOT NULL
                     )''')
 
     # Inserir dados na tabela
-    cursor.execute("INSERT INTO usuarios (nome, senha) VALUES (?, ?)", (new_name, new_pass))
+    cursor.execute("INSERT INTO usuarios (nome, senha, contato) VALUES (?, ?, ?)", (new_name, new_pass, new_cont))
 
     # Selecionar ID
     cursor.execute("SELECT MAX(id) FROM usuarios")
@@ -250,6 +251,43 @@ def give_back(devolver):
     conn.close()
 
 # ----------------------------------------------------------------------------------
+
+# Relatório
+def report():
+    print("==============================")
+    print("RELATÓRIO")
+    print()
+    # Conectar ao banco de dados
+    conn = sqlite3.connect('projeto.db')
+
+    # Criar um cursor para executar comandos SQL
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM livros")
+    cursor.execute("SELECT * FROM livros_empr")
+    cursor.execute("SELECT * FROM usuarios")
+
+    print("\033[95mLIVROS DISPONÍVEIS\x1b[0m")
+    print("==============================")
+    cursor.execute("SELECT * FROM livros")
+    for linha in cursor.fetchall():
+        print(f"\033[93mID: \033[94m{linha[0]} \033[93mTitulo: \033[94m{linha[1]} \033[93mAutor: \033[94m{linha[2]} \033[93mData de publicação: \033[94m{linha[3]}\x1b[0m")
+    
+    print()
+    print("\033[95mLIVROS EMPRESTADOS\x1b[0m")
+    print("==============================")
+    cursor.execute("SELECT * FROM livros_empr")
+    for linha in cursor.fetchall():
+        print(f"\033[93mID: \033[94m{linha[0]} \033[93mTitulo: \033[94m{linha[1]} \033[93mAutor: \033[94m{linha[2]} \033[93mData de publicação: \033[94m{linha[3]} \033[93mID de usuario: \033[94m{linha[4]}\x1b[0m")
+    
+    print()
+    print("\033[95mUSUÁRIOS CADASTRADOS\x1b[0m")
+    print("==============================")
+    cursor.execute("SELECT * FROM usuarios")
+    for linha in cursor.fetchall():
+        print(f"\033[93mNome: \033[94m{linha[1]} \033[93mContato: \033[94m{linha[3]}\x1b[0m")
+
+# ----------------------------------------------------------------------------------
 # INICIO DO PROGRAMA
 # ----------------------------------------------------------------------------------
 
@@ -272,52 +310,63 @@ while pt != "5":
     if pt == "1":
         new_name = input("Digite um nome de usuário: ")
         new_pass = input("Nova senha: ")
+        new_cont = input("Número para contato: ")
         print("\033[92mFaça login com seu ID: \x1b[0m")
         new_user()
         time.sleep(2)
 
     # Login
-    if pt == "2":
-        login_id = input("ID: ")
-        login_user(login_id)
-        if boolLogin:
-            login_senha = input("senha: ")
-            pass_user(login_senha)
-            if boolSenha:
-                print("==============================")
-                print("\033[94mBuscar livros[1]\x1b[0m")
-                print("\033[93mDevolver livros[2]\x1b[0m")
-                print("==============================")
-                menu_user = input("opção: ")
+    elif pt == "2":
+        try:
+            login_id = input("ID: ")
+            login_user(login_id)
+            if boolLogin:
+                login_senha = input("senha: ")
+                pass_user(login_senha)
+                if boolSenha:
+                    print("==============================")
+                    print("\033[94mBuscar livros[1]\x1b[0m")
+                    print("\033[93mDevolver livros[2]\x1b[0m")
+                    print("==============================")
+                    menu_user = input("opção: ")
 
-                # Pesquisar livro
-                if menu_user == "1":
-                    print("==============================")
-                    busca = input("\033[95mBusque por ID, Título, Autor ou Ano de publicação: \x1b[0m")
-                    book_search(busca)
-                    print("==============================")
+                    # Pesquisar livro
+                    if menu_user == "1":
+                        print("==============================")
+                        busca = input("\033[95mBusque por ID, Título, Autor ou Ano de publicação: \x1b[0m")
+                        book_search(busca)
+                        print("==============================")
 
-                    # Escolher livro
-                    esco_livro = input("Digite o ID do livro para emprestimo: ")
-                    choice(esco_livro)
-                if menu_user == "2":
-                    print("==============================")
-                    print("EMPRÉSTIMOS FEITOS")
-                    print("==============================")
-                    show()
+                        # Escolher livro
+                        esco_livro = input("Digite o ID do livro para emprestimo: ")
+                        choice(esco_livro)
+                    elif menu_user == "2":
+                        print("==============================")
+                        print("EMPRÉSTIMOS FEITOS")
+                        print("==============================")
+                        show()
 
-                    # Selecionar qual livro devolver
-                    devolver = input("Digite o ID do livro para devolver: ")
-                    give_back(devolver)
-                    quant()
-        else:
-            print("\033[91mID invalido\x1b[0m")
+                        # Selecionar qual livro devolver
+                        devolver = input("Digite o ID do livro para devolver: ")
+                        give_back(devolver)
+                        quant()
+            else:
+                print("\033[91mID invalido\x1b[0m")
+        except:
+            print("\033[91mErro\x1b[0m")
 
     # Cadastrar livro
-    if pt == "3":
+    elif pt == "3":
         titulo = input("Título: ")
         autor = input("Autor: ")
         data_publi = input("Ano de publicação: ")
         copias = input("Quantidade de cópias: ")
         new_book()
         print("\033[92mLivro cadastrado\x1b[0m")
+    
+    # Relatório
+    elif pt == "4":
+        try:
+            report()
+        except:
+            print("\033[91mPara ver o relatório, precisa de pelo menos um usuario e livro cadastrados, e um emprestimo feito\x1b[0m")
