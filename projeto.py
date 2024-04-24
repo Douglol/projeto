@@ -9,16 +9,17 @@ def new_book():
     # Criar um cursor para executar comandos SQL
     cursor = conn.cursor()
 
-    # Criar uma tabela
+    # Criar tabela de livros
     cursor.execute('''CREATE TABLE IF NOT EXISTS livros (
                         id_livro INTEGER PRIMARY KEY,
                         titulo TEXT NOT NULL,
                         autor TEXT NOT NULL,
-                        data_publi INTEGER NOT NULL
+                        data_publi INTEGER NOT NULL,
+                        copias INTEGER NOT NULL
                     )''')
 
     # Inserir dados na tabela
-    cursor.execute("INSERT INTO livros (titulo, autor, data_publi) VALUES (?, ?, ?)", (titulo, autor, data_publi))
+    cursor.execute("INSERT INTO livros (titulo, autor, data_publi, copias) VALUES (?, ?, ?, ?)", (titulo, autor, data_publi, copias))
 
     # Commit para salvar as alterações
     conn.commit()
@@ -28,34 +29,43 @@ def new_book():
 
 # ----------------------------------------------------------------------------------
 
-# Emprestimo de Livro
-def book_loan():
+# Escolher livro
+def choice(escolha):
     # Conectar ao banco de dados
     conn = sqlite3.connect('projeto.db')
 
     # Criar um cursor para executar comandos SQL
     cursor = conn.cursor()
 
-    # Criar uma tabela
+    # Criar tabela de livros emprestados
     cursor.execute('''CREATE TABLE IF NOT EXISTS livros_empr (
-                        id_emp INTEGER PRIMARY KEY,
+                        id INTEGER PRIMARY KEY,
+                        id_livro INTEGER NOT NULL,
                         titulo TEXT NOT NULL,
                         autor TEXT NOT NULL,
                         data_publi INTEGER NOT NULL,
-                        FOREIGN KEY (id_livro) REFERENCES livros(id_livro)
+                        id_usuario INTEGER NOT NULL
                     )''')
 
-    # Inserir dados na tabela
-    cursor.execute("INSERT INTO livros_empr (titulo, autor, data_publi) WHERE id_livro=?", (esco_livro))
+    cursor.execute("SELECT * FROM livros WHERE id_livro=?", (escolha))
+    for linha in cursor.fetchall():
+        valor = linha[4] - 1
+        print(f"\033[92mEmprestimo de {linha[1]} feito\x1b[0m")
+        cursor.execute(f"UPDATE livros SET copias = {valor} WHERE id_livro = {escolha}")
+        # Inserir dados na tabela de emprestimos
+        cursor.execute("INSERT INTO livros_empr (id_livro, titulo, autor, data_publi, id_usuario) VALUES (?, ?, ?, ?, ?)", (escolha, linha[1], linha[2], linha[3], login_id))
+
+        # Mostrar emprestimos
+        cursor.execute("SELECT * FROM livros_empr WHERE id_usuario=?", (login_id))
+        for linha in cursor.fetchall():
+            print(linha)
+        
+        cursor.execute("DELETE FROM livros WHERE copias = 0")
+
+    time.sleep(2)
 
     # Commit para salvar as alterações
     conn.commit()
-
-    # Exibir os dados
-    cursor.execute("SELECT * FROM livros")
-    print("Dados na tabela:")
-    for linha in cursor.fetchall():
-        print(linha)
 
     # Fechar a conexão com o banco de dados
     conn.close()
@@ -158,8 +168,42 @@ def book_search(busca):
         linha = list(linha)
         linha[0] = str(linha[0])
         linha[3] = str(linha[3])
+        linha[4] = str(linha[4])
         if busca in linha:
-            print(f"\033[93mID: \033[94m{linha[0]} \033[93mTítulo: \033[94m{linha[1]} \033[93mAutor: \033[94m{linha[2]} \033[93mData de publicação: \033[94m{linha[3]}\x1b[0m")
+            print(f"\033[93mID: \033[94m{linha[0]} \033[93mTítulo: \033[94m{linha[1]} \033[93mAutor: \033[94m{linha[2]} \033[93mData de publicação: \033[94m{linha[3]} \033[93mCopias disponiveis: \033[94m{linha[4]}\x1b[0m")
+
+# ----------------------------------------------------------------------------------
+
+# Exibir livro
+def show():
+    # Conectar ao banco de dados
+    conn = sqlite3.connect('projeto.db')
+
+    # Criar um cursor para executar comandos SQL
+    cursor = conn.cursor()
+
+    # Mostrar emprestimos
+    cursor.execute("SELECT * FROM livros_empr WHERE id_usuario=?", (login_id))
+    for linha in cursor.fetchall():
+        print(f"ID: {linha[0]}, Titulo: {linha[2]}, Autor: {linha[3]}, Data de publicação: {linha[4]}")
+
+# ----------------------------------------------------------------------------------
+
+# Devolver livro
+def give_back(devolver):
+    # Conectar ao banco de dados
+    conn = sqlite3.connect('projeto.db')
+
+    # Criar um cursor para executar comandos SQL
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM livros_empr WHERE id=?", (devolver))
+
+    # Commit para salvar as alterações
+    conn.commit()
+
+    # Fechar a conexão com o banco de dados
+    conn.close()
 
 # ----------------------------------------------------------------------------------
 # INICIO DO PROGRAMA
@@ -211,7 +255,15 @@ while pt != "5":
 
                     # Escolher livro
                     esco_livro = input("Digite o ID do livro para emprestimo: ")
-                    book_loan()
+                    choice(esco_livro)
+                if menu_user == "2":
+                    print("==============================")
+                    print("EMPRÉSTIMOS FEITOS")
+                    show()
+
+                    # Selecionar qual livro devolver
+                    devolver = input("Digite o ID do livro para devolver: ")
+                    give_back(devolver)
         else:
             print("\033[91mID invalido\x1b[0m")
 
@@ -220,5 +272,6 @@ while pt != "5":
         titulo = input("Título: ")
         autor = input("Autor: ")
         data_publi = input("Ano de publicação: ")
+        copias = input("Quantidade de cópias: ")
         new_book()
         print("\033[92mLivro cadastrado\x1b[0m")
